@@ -1,6 +1,7 @@
 /// <reference types="@workadventure/iframe-api-typings" />
 
 import { bootstrapExtra } from "@workadventure/scripting-api-extra";
+import { updateMyPlace } from "./places";
 
 console.log('Script started successfully');
 
@@ -20,8 +21,142 @@ WA.onInit().then(() => {
     WA.room.area.onLeave('clock').subscribe(closePopup)
 
     // The line below bootstraps the Scripting API Extra library that adds a number of advanced properties/features to WorkAdventure
-    bootstrapExtra().then(() => {
+    bootstrapExtra().then(async () => {
         console.log('Scripting API Extra ready');
+        await WA.players.configureTracking({
+            players: true,
+            movement: true,
+        });
+    
+    
+        await updateMyPlace();
+    
+        // Let's initialize the "tags" variable to expose our tags to others
+        await WA.player.state.saveVariable('tags', WA.player.tags, {
+            persist: false,
+            public: true,
+        });
+
+        // const players = WA.players.list();
+        // const tiledMap = WA.room.getTiledMap();
+        
+        // Send initial state to backend
+        // console.log('Sending initial state to backend...');
+        // fetch('http://localhost:3000/workadventure/room/state', {
+        //     method: 'POST',
+        //     headers: {
+        //         'Content-Type': 'application/json',
+        //         'X-Map-Source': 'polygents-map',
+                
+        //     },
+        //     credentials: 'include',
+        //     body: JSON.stringify({
+        //         players: players,
+        //         map: tiledMap
+        //     })
+        // })
+        // .then(response => {
+        //     if (!response.ok) {
+        //         throw new Error(`HTTP error! status: ${response.status}`);
+        //     }
+        //     console.log('Initial state sent successfully');
+        // })
+        // .catch(error => {
+        //     console.error('Error sending initial state:', error);
+        // });
+
+        // Subscribe to player events and forward them to backend
+        // WA.players.onPlayerMoves.subscribe((event: RemotePlayerMoved) => {
+        //     const player = event.player;
+        //     const oldPosition = event.oldPosition;
+        //     const newPosition = event.newPosition;
+        //     console.log(`Player ${player.name} moved from ${oldPosition.x},${oldPosition.y} to ${newPosition.x},${newPosition.y}`);
+            
+        //     console.log(`Sending player move event for ${player.name}`);
+        //     fetch('http://localhost:3000/workadventure/room/event/player-move', {
+        //         method: 'POST',
+        //         headers: {
+        //             'Content-Type': 'application/json',
+        //             'X-Map-Source': 'polygents-map',
+        //         },
+        //         credentials: 'include',
+        //         body: JSON.stringify({
+        //             data: {
+        //                 type: 'move',
+        //                 player: player,
+        //                 oldPosition,
+        //                 newPosition
+        //             }
+        //         })
+        //     })
+        //     .then(response => {
+        //         if (!response.ok) {
+        //             throw new Error(`HTTP error! status: ${response.status}`);
+        //         }
+        //         console.log('Move event sent successfully');
+        //     })
+        //     .catch(error => {
+        //         console.error('Error sending move event:', error);
+        //     });
+        // });
+
+        // WA.players.onPlayerEnters.subscribe((player: RemotePlayerInterface) => {
+        //     console.log(`Player ${player.name} entered your nearby zone`);
+            
+        //     console.log(`Sending player enter event for ${player.name}`);
+        //     fetch('http://localhost:3000/workadventure/room/event/player-enter', {
+        //         method: 'POST',
+        //         headers: {
+        //             'Content-Type': 'application/json',
+        //             'X-Map-Source': 'polygents-map',
+        //         },
+        //         credentials: 'include',
+        //         body: JSON.stringify({
+        //             data: {
+        //                 type: 'enter',
+        //                 player: player
+        //             }
+        //         })
+        //     })
+        //     .then(response => {
+        //         if (!response.ok) {
+        //             throw new Error(`HTTP error! status: ${response.status}`);
+        //         }
+        //         console.log('Enter event sent successfully');
+        //     })
+        //     .catch(error => {
+        //         console.error('Error sending enter event:', error);
+        //     });
+        // });
+
+        // WA.players.onPlayerLeaves.subscribe((player: RemotePlayerInterface) => {
+        //     console.log(`Player ${player.name} left your nearby zone`);
+            
+        //     console.log(`Sending player leave event for ${player.name}`);
+        //     fetch('http://localhost:3000/workadventure/room/event/player-leave', {
+        //         method: 'POST',
+        //         headers: {
+        //             'Content-Type': 'application/json',
+        //             'X-Map-Source': 'polygents-map',
+        //         },
+        //         credentials: 'include',
+        //         body: JSON.stringify({
+        //             data: {
+        //                 type: 'leave',
+        //                 player: player
+        //             }
+        //         })
+        //     })
+        //     .then(response => {
+        //         if (!response.ok) {
+        //             throw new Error(`HTTP error! status: ${response.status}`);
+        //         }
+        //         console.log('Leave event sent successfully');
+        //     })
+        //     .catch(error => {
+        //         console.error('Error sending leave event:', error);
+        //     });
+        // });
     }).catch(e => console.error(e));
 
 }).catch(e => console.error(e));
