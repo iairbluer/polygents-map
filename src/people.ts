@@ -1,4 +1,4 @@
-import {RemotePlayerInterface} from "@workadventure/iframe-api-typings";
+import { RemotePlayerInterface } from "@workadventure/iframe-api-typings";
 import {z} from "zod";
 
 
