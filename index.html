@@ -7,6 +7,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex">
     <meta name="title" content="WorkAdventure Starter Kit">
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval';
+        connect-src 'self' ws://localhost:3000 http://*.workadventure.localhost ws://*.workadventure.localhost;
+        img-src 'self' data: blob: http://*.workadventure.localhost;
+        style-src 'self' 'unsafe-inline';
+        frame-src 'self' data: http://*.workadventure.localhost https://*.workadventu.re ws://localhost:*;
+    ">
     <title>WorkAdventure test map</title>
     <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
     <script>
@@ -17,7 +25,7 @@
                 path = path.substr(path, path.length - 'index.html'.length);
             }
             const instanceId = Math.random().toString(36).substring(2, 15);
-            const url = `https://play.workadventu.re/_/${instanceId}/${host}${path}office.tmj`;
+            const url = `http://play.workadventure.localhost/_/${instanceId}/${host}${path}office.tmj`;
             document.getElementById('testMapURL').href = url;
             document.getElementById('testMapBtnURL').href = url;
             document.getElementById('testMapURL').innerText = url;

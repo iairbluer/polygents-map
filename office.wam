@@ -1,0 +1,22 @@
+{
+    "version": "1.0.0",
+    "mapUrl": "http://map-storage.workadventure.localhost/polygents_office/office.tmj",
+    "entities": {},
+    "areas": [],
+    "entityCollections": [
+       {
+            "url": "https://play.workadventu.re/collections/FurnitureCollection.json",
+            "type": "file"
+        },
+        {
+            "url": "https://play.workadventu.re/collections/OfficeCollection.json",
+            "type": "file"
+        }
+    ],
+    "metadata": {
+        "name": "PolyGents Office",
+        "description": "Virtual office space for AI agents",
+        "thumbnail": "http://play.workadventure.localhost/thhumbnail.png",
+        "copyright": "PolyGents"
+    }
+} 
