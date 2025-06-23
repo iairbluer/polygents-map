@@ -8,6 +8,7 @@ export class MapEventsSocket {
   private connectionPromise: Promise<void>;
   private resolveConnection!: () => void;
   private rejectConnection!: (reason: any) => void;
+  private movementCallback?: (destPlayerName: string) => void;
 
   constructor() {
     this.connectionPromise = new Promise((resolve, reject) => {
@@ -32,14 +33,14 @@ export class MapEventsSocket {
 
   private setupEventListeners() {
     this.socket.on('connect', () => {
-      console.log('Connected to map events WebSocket server');
+      console.log('[MapEventsSocket] Connected to map events WebSocket server');
       this.isConnected = true;
       this.reconnectAttempts = 0;
       this.resolveConnection();
     });
 
     this.socket.on('disconnect', () => {
-      console.log('Disconnected from map events WebSocket server');
+      console.log('[MapEventsSocket] Disconnected from map events WebSocket server');
       this.isConnected = false;
       // Reset connection promise for next connection attempt
       this.connectionPromise = new Promise((resolve, reject) => {
@@ -49,12 +50,24 @@ export class MapEventsSocket {
     });
 
     this.socket.on('connect_error', (error) => {
-      console.error('WebSocket connection error:', error);
+      console.error('[MapEventsSocket] WebSocket connection error:', error);
       this.reconnectAttempts++;
       
       if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-        console.error('Max reconnection attempts reached, falling back to HTTP');
+        console.error('[MapEventsSocket] Max reconnection attempts reached, falling back to HTTP');
         this.rejectConnection(error);
+      }
+    });
+
+    // Listen for incoming movement trigger commands from backend
+    this.socket.on('robot-move-command', (data: { trigger: boolean, destPlayerName: string }) => {
+      console.log('[MapEventsSocket] Received movement trigger command:', data);
+      if (this.movementCallback) {
+        console.log('[MapEventsSocket] Executing movement callback');
+        this.movementCallback(data.destPlayerName);
+        console.log('[MapEventsSocket] Movement callback executed');
+      } else {
+        console.warn('[MapEventsSocket] No movement callback registered!');
       }
     });
   }
@@ -66,11 +79,16 @@ export class MapEventsSocket {
     return this.connectionPromise;
   }
 
-  public async sendRoomState(players: any[], map: any): Promise<void> {
+  public onMovementCommand(callback: (destPlayerName: string) => void) {
+    console.log('[MapEventsSocket] Registering movement callback');
+    this.movementCallback = callback;
+  }
+
+  public async sendRoomState(players: any, map: any, places: any, peopleByPlace: any): Promise<void> {
     try {
       await this.waitForConnection();
       
-      this.socket.emit('room-state', { players, map }, (response: any) => {
+      this.socket.emit('room-state', { players, map, places, peopleByPlace }, (response: any) => {
         if (response?.status === 'error') {
           console.error('Error sending room state:', response.message);
         }
@@ -139,6 +157,50 @@ export class MapEventsSocket {
       });
     } catch (error) {
       console.error('Failed to send player leave:', error);
+      throw error;
+    }
+  }
+
+  public async sendRobotMoveRequest(data: { type: string; player: any; content: string }): Promise<string> {
+    try {
+      await this.waitForConnection();
+
+      return new Promise((resolve, reject) => {
+        this.socket.emit('robot-move-request', { data }, (response: any) => {
+          if (response?.status === 'error') {
+            console.error('Error sending robot move request:', response.message);
+            reject(new Error(response.message));
+          } else if (response?.result) {
+            resolve(response.result);
+          } else {
+            reject(new Error('No response from robot move request'));
+          }
+        });
+      });
+    } catch (error) {
+      console.error('Failed to send robot move request:', error);
+      throw error;
+    }
+  }
+
+  public async sendRobotChatRequest(data: { messages: any[] }): Promise<string> {
+    try {
+      await this.waitForConnection();
+
+      return new Promise((resolve, reject) => {
+        this.socket.emit('robot-chat-request', data, (response: any) => {
+          if (response?.status === 'error') {
+            console.error('Error sending robot chat request:', response.message);
+            reject(new Error(response.message));
+          } else if (response?.result) {
+            resolve(response.result);
+          } else {
+            reject(new Error('No response from robot chat request'));
+          }
+        });
+      });
+    } catch (error) {
+      console.error('Failed to send robot chat request:', error);
       throw error;
     }
   }

@@ -1,11 +1,12 @@
 /// <reference types="@workadventure/iframe-api-typings" />
 
 import { bootstrapExtra, getVariables } from "@workadventure/scripting-api-extra";
-import { updateMyPlace } from "./places";
+import { findPlaces, updateMyPlace } from "./places";
 import { RemotePlayerInterface } from "@workadventure/iframe-api-typings";
 import { RemotePlayerMoved } from "@workadventure/iframe-api-typings/play/src/front/Api/Iframe/Players/RemotePlayer";
-// import { robot } from "./robot";
+import { robot } from "./robot";
 import { MapEventsSocket } from "./map-events-socket";
+import { findPeopleByPlace } from "./people";
 
 console.log('Script started successfully');
 
@@ -48,12 +49,19 @@ WA.onInit().then(async () => {
         
         const players = await WA.players.list();
         console.log('Players: ', players);
+        
         const tiledMap = await WA.room.getTiledMap();
+
+        const places = await findPlaces();  
+        console.log('Places: ', places);
+
+        const peopleByPlace = findPeopleByPlace();
+        console.log('People by place: ', peopleByPlace);
         
         // Send initial state through WebSocket
         console.log('Sending initial state through WebSocket...');
         try {
-            await mapEventsSocket.sendRoomState([], tiledMap);
+            await mapEventsSocket.sendRoomState(players, tiledMap, places, peopleByPlace);
             console.log('Initial state sent successfully');
         } catch (error) {
             console.error('Failed to send initial state:', error);
@@ -107,7 +115,10 @@ WA.onInit().then(async () => {
             public: true,
         });
 
-        // robot.init();
+        // Always initialize robot for WebSocket communication with backend
+        console.log('[main.ts] Initializing robot...');
+        robot.init();
+        console.log('[main.ts] Robot initialization completed');
        
     }).catch(e => console.error(e));
 

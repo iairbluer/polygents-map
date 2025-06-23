@@ -1,94 +1,103 @@
-// import {throttle} from "throttle-debounce";
+import {throttle} from "throttle-debounce";
 // import {getMovePrompt} from "./movePrompt";
-// import OpenAI from "openai";
 import type {RemotePlayerInterface} from "@workadventure/iframe-api-typings";
-import {getChatPrompt, userJoinedChat} from "./chatPrompt";
+import {userJoinedChat} from "./chatPrompt";
+import { MapEventsSocket } from "./map-events-socket";
 
 // TODO: import this file ONLY in robot mode
 
-// const throttledMovePrompt = throttle(30000, async () => {
-//     // TODO: do this only if in "waiting mode"
-//     const movePrompt = await getMovePrompt();
+// Create a singleton instance for WebSocket communication
+const mapEventsSocket = new MapEventsSocket();
 
-//     console.log("Sending prompt: ", movePrompt);
+const throttledMovePrompt = throttle(30000, async (destPlayerName: string) => {
+    console.log("[throttledMovePrompt] Function called - starting movement evaluation");
+    // TODO: do this only if in "waiting mode"
+    // const movePrompt = await getMovePrompt();
 
-//     const chatCompletion = await fetch('http://localhost:3000/workadventure/room/event/move', {
-//         method: 'POST',
-//         headers: {
-//             'Content-Type': 'application/json',
-//         },
-//         body: JSON.stringify({  
-//             data: {
-//                 type: 'move',
-//                 player: WA.player,
-//                 content: movePrompt,
-//             }
-//         })
-//     })
-    
-//     // TODO: SET PROPER AGENT COMMUNICATION
-//     // this.openai.chat.completions.create({
-//     //     messages: [{ role: 'user', content: movePrompt }],
-//     //     model: 'gpt-3.5-turbo',
-//     // });
+    // console.log("[throttledMovePrompt] Sending prompt: ", movePrompt);
 
-//     // TODO: RESTORE after proper agent connection and communication are set - chatCompletion.choices[0]?.message.content;
-//     const response = await chatCompletion.json();
-//     console.log("Response: ", response);
-//     if (response === null) {
-//         console.error("OpenAI returned no response: ", chatCompletion);
-//         return;
-//     }
-//     console.log("OpenAI response:", response);
+    try {
+        // Get player position
+        // const position = await WA.player.getPosition();
+        
+        // Only send necessary player data to avoid circular references
+        // const playerData = {
+        //     id: WA.player.id,
+        //     name: WA.player.name,
+        //     position: {
+        //         x: position.x,
+        //         y: position.y
+        //     },
+        //     tags: WA.player.tags
+        // };
 
-//     if (response.startsWith("Go to ")) {
-//         const name = response.substring(6);
-//         console.log("Going to ", name);
-//         const players = WA.players.list();
-//         for (const player of players) {
-//             if (player.name === name) {
-//                 await WA.player.moveTo(player.position.x, player.position.y);
-//                 break;
-//             }
-//         }
-//     }
-// }, {
-//     noTrailing: false,
-//     noLeading: false,
-// });
+        // const response = await mapEventsSocket.sendRobotMoveRequest({
+        //     type: 'move',
+        //     player: playerData,
+        //     content: movePrompt,
+        // });
+
+        // console.log("[throttledMovePrompt] Response: ", response);
+        
+        // if (response && response.startsWith("Go to ")) {
+        const name = destPlayerName;
+        console.log("[throttledMovePrompt] Going to ", name);
+        const players = WA.players.list();
+        for (const player of players) {
+            if (player.name === name) {
+                await WA.player.moveTo(player.position.x, player.position.y);
+                break;
+            }
+        }
+        // }
+    } catch (error) {
+        console.error("[throttledMovePrompt] Error sending move request:", error);
+    }
+}, {
+    noTrailing: false,
+    noLeading: false,
+});
 
 class Robot {
     private mode: "waiting" | "chatting" = "waiting";
-    // private openai!: OpenAI;
     private chatHistory: Array<{role: "system" | "assistant", content: string} | {role: "user", player: RemotePlayerInterface, content: string}> = [];
 
     init() {
-        console.log("Robot is starting...");
+        console.log("[Robot] Robot is starting...");
 
-        // TODO: CONNECT TO OUR AGENT
-        // this.openai = new OpenAI({
-        //     dangerouslyAllowBrowser: true,
-        //     apiKey: WA.room.hashParameters.openaiApiKey,
+        // Set up listener for movement commands from backend
+        console.log("[Robot] Setting up movement command listener");
+        mapEventsSocket.onMovementCommand((destPlayerName: string) => {
+            console.log("[Robot] Movement command callback triggered!");
+            this.executeMovementCommand(destPlayerName);
+        });
+        console.log("[Robot] Movement command listener setup complete");
+
+        // WA.players.onVariableChange('currentPlace').subscribe(async () => {
+        //     console.log("[Robot] currentPlace variable changed");
+        //     if (this.mode === "waiting") {
+        //         console.log("[Robot] Mode is waiting, calling throttledMovePrompt");
+        //         throttledMovePrompt();
+        //     }
         // });
 
-        WA.players.onVariableChange('currentPlace').subscribe(async () => {
-            if (this.mode === "waiting") {
-                // throttledMovePrompt();
-            }
-        });
-
         WA.player.proximityMeeting.onJoin().subscribe((users) => {
+            console.log("[Robot] Proximity meeting joined");
             // When we join a proximity meeting, we start chatting
-            this.mode = "chatting";
+            console.log("users: ", users);
+            this.mode = "waiting";
+            // TODO: add our own - this.mode = "chatting";
 
-            this.startChat(users);
+            // TODO: add our own - this.startChat(users);
         });
 
         WA.player.proximityMeeting.onParticipantJoin().subscribe((user) => {
+            console.log("[Robot] Participant joined proximity meeting - ", user);
             this.remotePlayerJoined(user);
         });
 
         WA.player.proximityMeeting.onLeave().subscribe(() => {
+            console.log("[Robot] Left proximity meeting");
             // When we leave a proximity meeting, we stop chatting
             this.mode = "waiting";
         });
@@ -122,28 +131,40 @@ class Robot {
         });
     }
 
-    private async startChat(users: RemotePlayerInterface[]) {
-
-        if (this.chatHistory.length === 0) {
-            const chatPrompt = await getChatPrompt(users);
-
-            console.log("Sending prompt: ", chatPrompt);
-
-            // TODO: only trigger the full script on first start
-            // For subsequent starts, we should only send the new information about users.
-
-            this.chatHistory = [{
-                role: "system",
-                content: chatPrompt,
-            }];
-
-            const response = await this.triggerGpt();
-
-            WA.chat.sendChatMessage(response, {
-                scope: "bubble",
-            });
+    private async executeMovementCommand(destPlayerName: string) {
+        try {
+            console.log(`[Robot] executeMovementCommand called - executing movement evaluation`);
+            // Instead of directly moving to coordinates, trigger the throttled move prompt
+            // which will evaluate the situation and decide where to move
+            await throttledMovePrompt(destPlayerName);
+            console.log(`[Robot] Movement evaluation completed`);
+        } catch (error) {
+            console.error("[Robot] Error executing movement command:", error);
         }
     }
+
+    // private async startChat(users: RemotePlayerInterface[]) {
+
+    //     if (this.chatHistory.length === 0) {
+    //         const chatPrompt = await getChatPrompt(users);
+
+    //         console.log("Sending prompt: ", chatPrompt);
+
+    //         // TODO: only trigger the full script on first start
+    //         // For subsequent starts, we should only send the new information about users.
+
+    //         this.chatHistory = [{
+    //             role: "system",
+    //             content: chatPrompt,
+    //         }];
+
+    //         const response = await this.triggerGpt();
+
+    //         WA.chat.sendChatMessage(response, {
+    //             scope: "bubble",
+    //         });
+    //     }
+    // }
 
     private async triggerGpt() {
         const messages = this.chatHistory.map(message => {
@@ -157,37 +178,31 @@ class Robot {
             scope: "bubble",
         });
 
-        // const chatCompletion = await this.openai.chat.completions.create({
-        //     messages,
-        //     model: 'gpt-3.5-turbo',
-        // });
+        try {
+            const response = await mapEventsSocket.sendRobotChatRequest({ messages });
+            
+            if (response === null || response === undefined) {
+                throw new Error("Agent returned no response")
+            }
+            console.log("Agent response:", response);
 
-        const chatCompletion = await fetch('http://localhost:3000/workadventure/room/event/move', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                messages,
-            }),
-        });
+            WA.chat.stopTyping({
+                scope: "bubble",
+            });
 
-        const response = await chatCompletion.json(); // chatCompletion.choices[0]?.message.content;
-        if (response === null || response === undefined) {
-            throw new Error("OpenAI returned no response: " + JSON.stringify(chatCompletion))
+            this.chatHistory.push({
+                role: "assistant",
+                content: response,
+            });
+
+            return response;
+        } catch (error) {
+            WA.chat.stopTyping({
+                scope: "bubble",
+            });
+            console.error("Error getting chat response:", error);
+            return "Sorry, I'm having trouble responding right now.";
         }
-        console.log("OpenAI response:", response);
-
-        WA.chat.stopTyping({
-            scope: "bubble",
-        });
-
-        this.chatHistory.push({
-            role: "assistant",
-            content: response,
-        });
-
-        return response;
     }
 
     private async remotePlayerJoined(user: RemotePlayerInterface) {
