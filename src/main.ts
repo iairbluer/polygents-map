@@ -58,10 +58,19 @@ WA.onInit().then(async () => {
         const peopleByPlace = findPeopleByPlace();
         console.log('People by place: ', peopleByPlace);
         
+        // Convert Maps to plain objects for proper JSON serialization
+        const placesObject = Object.fromEntries(places);
+        const peopleByPlaceObject = Object.fromEntries(
+            Array.from(peopleByPlace.entries()).map(([key, value]) => [key, value])
+        );
+        
+        console.log('Places as object: ', placesObject);
+        console.log('People by place as object: ', peopleByPlaceObject);
+        
         // Send initial state through WebSocket
         console.log('Sending initial state through WebSocket...');
         try {
-            await mapEventsSocket.sendRoomState(players, tiledMap, places, peopleByPlace);
+            await mapEventsSocket.sendRoomState(players, tiledMap, placesObject, peopleByPlaceObject);
             console.log('Initial state sent successfully');
         } catch (error) {
             console.error('Failed to send initial state:', error);

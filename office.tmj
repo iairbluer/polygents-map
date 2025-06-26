@@ -342,6 +342,16 @@
                  "name":"jitsiChillZone",
                  "properties":[
                         {
+                         "name":"ai-zone",
+                         "type":"bool",
+                         "value":true
+                        },
+                        {
+                         "name":"description",
+                         "type":"string",
+                         "value":"A relaxed area for informal conversations and breaks"
+                        },
+                        {
                          "name":"focusable",
                          "type":"bool",
                          "value":true
@@ -374,6 +384,16 @@
                  "name":"silentZone",
                  "properties":[
                         {
+                         "name":"ai-zone",
+                         "type":"bool",
+                         "value":true
+                        },
+                        {
+                         "name":"description",
+                         "type":"string",
+                         "value":"A quiet work area for focused individual tasks"
+                        },
+                        {
                          "name":"silent",
                          "type":"bool",
                          "value":true
@@ -390,6 +410,16 @@
                  "id":16,
                  "name":"jitsiMeetingRoom",
                  "properties":[
+                        {
+                         "name":"ai-zone",
+                         "type":"bool",
+                         "value":true
+                        },
+                        {
+                         "name":"description",
+                         "type":"string",
+                         "value":"A formal meeting room for important discussions and presentations"
+                        },
                         {
                          "name":"focusable",
                          "type":"bool",
@@ -427,6 +457,28 @@
                  "width":50.2727272727272,
                  "x":438.484848484849,
                  "y":96.3333333333333
+                },
+                {
+                 "height":128,
+                 "id":20,
+                 "name":"lobby",
+                 "properties":[
+                        {
+                         "name":"ai-zone",
+                         "type":"bool",
+                         "value":true
+                        },
+                        {
+                         "name":"description",
+                         "type":"string",
+                         "value":"The main lobby area where people gather and interact"
+                        }],
+                 "rotation":0,
+                 "type":"area",
+                 "visible":true,
+                 "width":320,
+                 "x":256,
+                 "y":256
                 }, 
                 {
                  "height":64,
